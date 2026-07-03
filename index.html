@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STACY INTERFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #050b0d;
+    --bg-deep: #020506;
+    --panel: #081619;
+    --panel-line: rgba(76, 224, 218, 0.18);
+    --cyan: #35e6e0;
+    --cyan-bright: #9df9f5;
+    --cyan-dim: #0f4c4a;
+    --cyan-glow: rgba(53, 230, 224, 0.55);
+    --amber: #ffb454;
+    --red: #ff5d5d;
+    --text: #cdeef0;
+    --text-dim: #5f8a8c;
+    --text-faint: #325457;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(13,60,60,0.35), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(53,230,224,0.02) 0px, rgba(53,230,224,0.02) 1px, transparent 1px, transparent 3px),
+      var(--bg-deep);
+    color: var(--text);
+    font-family:'Rajdhani', sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .scanlines{
+    position:fixed; inset:0; pointer-events:none; z-index:50;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.12) 3px);
+    mix-blend-mode: overlay;
+  }
+  .vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:49;
+    box-shadow: inset 0 0 180px rgba(0,0,0,0.85);
+  }
+
+  .app{
+    position:relative;
+    height:100vh;
+    display:grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 18px 26px 22px;
+    gap: 14px;
+  }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom: 1px solid var(--panel-line);
+    padding-bottom: 12px;
+  }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{
+    width:34px; height:34px; position:relative;
+  }
+  .brand-mark svg{ width:100%; height:100%; }
+  .brand-text h1{
+    font-family:'Orbitron', sans-serif;
+    font-weight:700;
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: var(--cyan-bright);
+    text-shadow: 0 0 14px var(--cyan-glow);
+  }
+  .brand-text span{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .top-status{ display:flex; align-items:center; gap:26px; }
+  .status-chip{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; color: var(--text-dim);
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation: blink 2.4s infinite ease-in-out; }
+  .dot.amber{ background:var(--amber); box-shadow:0 0 8px var(--amber); animation-delay:.4s;}
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  .clock{ text-align:right; font-family:'JetBrains Mono', monospace; }
+  .clock .time{ font-size:19px; color:var(--cyan-bright); letter-spacing:2px; }
+  .clock .date{ font-size:10px; color:var(--text-dim); letter-spacing:2px; margin-top:2px; }
+
+  /* ---------- MAIN GRID ---------- */
+  .main{
+    display:grid;
+    grid-template-columns: 260px 1fr 300px;
+    gap: 18px;
+    min-height:0;
+  }
+
+  .panel{
+    background: linear-gradient(180deg, rgba(53,230,224,0.035), rgba(53,230,224,0.0) 40%), var(--panel);
+    border: 1px solid var(--panel-line);
+    position:relative;
+    padding: 16px 16px 18px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow:hidden;
+  }
+  .panel::before{
+    content:''; position:absolute; top:0; left:0; width:36px; height:2px; background: var(--cyan); box-shadow:0 0 8px var(--cyan);
+  }
+  .panel-title{
+    font-family:'Orbitron', sans-serif; font-size:11px; letter-spacing:3px;
+    color: var(--cyan); margin-bottom: 14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel-title small{ font-family:'JetBrains Mono', monospace; color:var(--text-faint); font-size:9px; letter-spacing:1px; }
+
+  /* left: system metrics */
+  .subgrid{ margin-top:0; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat-tile{ border:1px solid var(--panel-line); padding:8px 10px; }
+  .stat-tile .t-label{ font-family:'JetBrains Mono', monospace; font-size:9px; color:var(--text-faint); letter-spacing:1px; }
+  .stat-tile .t-value{ font-family:'Orbitron', sans-serif; font-size:14px; color:var(--text); margin-top:4px; }
+
+  /* ---------- LEFT COLUMN: kartu-kartu terpisah, bukan satu panel gabungan ---------- */
+  .left-stack{
+    display:flex; flex-direction:column; gap:12px;
+    min-height:0; overflow-y:auto; padding-right:2px;
+  }
+  .left-stack::-webkit-scrollbar{ width:4px; }
+  .left-stack::-webkit-scrollbar-thumb{ background: var(--cyan-dim); }
+
+  .ring-cards-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .ring-panel{ padding: 12px 10px 14px; }
+  .ring-panel .panel-title{ margin-bottom:10px; font-size:9.5px; letter-spacing:2px; justify-content:center; }
+  .ring-box{ display:flex; flex-direction:column; align-items:center; }
+  .ring-wrap{ position:relative; width:76px; height:76px; }
+  .ring-wrap svg{ width:100%; height:100%; transform: rotate(-90deg); }
+  .ring-track{ fill:none; stroke: rgba(53,230,224,0.09); stroke-width:6; }
+  .ring-fill{
+    fill:none; stroke: var(--cyan); stroke-width:6; stroke-linecap:round;
+    filter: drop-shadow(0 0 5px var(--cyan-glow));
+    transition: stroke-dashoffset .7s ease, stroke .4s ease;
+  }
+  .ring-center{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .ring-center .rc-value{ font-family:'Orbitron', sans-serif; font-size:14px; color: var(--cyan-bright); }
+  .ring-center .rc-note{
+    font-family:'JetBrains Mono', monospace; font-size:7px; letter-spacing:1.5px; color: var(--text-faint); margin-top:2px;
+  }
+  .ring-center .rc-note.charging{ color: var(--amber); }
+
+  /* RAM graph panel - gaya neon hijau ala grafik saham */
+  .graph-panel{ background: #030807; padding: 14px 14px 10px; }
+  .graph-panel .panel-title{ color: var(--cyan); }
+  .graph-panel .panel-title small{ font-family:'Orbitron', sans-serif; color: var(--cyan-bright); font-size:11px; letter-spacing:1px; }
+  .ram-graph-frame{
+    position:relative; background:#000; border:1px solid rgba(53,230,224,0.15);
+    box-shadow: inset 0 0 24px rgba(53,230,224,0.08);
+  }
+  .ram-graph-frame canvas{ width:100%; height:120px; display:block; }
+  .graph-scale{
+    display:flex; justify-content:space-between;
+    font-family:'JetBrains Mono', monospace; font-size:8px; color: var(--text-faint); letter-spacing:1px; margin-top:6px;
+  }
+
+  /* Storage panel */
+  .storage-panel .storage-value-row{ display:flex; align-items:baseline; gap:6px; margin-bottom:10px; }
+  .storage-value{ font-family:'Orbitron', sans-serif; font-size:22px; color: var(--cyan-bright); }
+  .storage-unit{ font-family:'JetBrains Mono', monospace; font-size:9px; color: var(--text-faint); letter-spacing:1px; }
+  .storage-track{
+    position:relative; height:8px; background: rgba(53,230,224,0.08); overflow:hidden;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+  }
+  .storage-fill{
+    position:absolute; inset:0; width:0%;
+    background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+    box-shadow: 0 0 8px var(--cyan-glow);
+    transition: width .6s ease, background .4s ease;
+  }
+  .storage-ticks{ display:flex; justify-content:space-between; margin-top:6px; }
+  .storage-ticks span{ width:1px; height:4px; background: var(--panel-line); }
+  .storage-panel.blink-critical .storage-value{ animation: blinker 1s linear infinite; color:#ff3b30 !important; }
+
+  /* CENTER: the HUD core */
+  .core-wrap{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative; min-height:0;
+  }
+  .core-stage{
+    position:relative; width:min(46vw, 420px); aspect-ratio:1/1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .core-stage svg.rings{ position:absolute; inset:0; width:100%; height:100%; }
+  #waveCanvas{ position:absolute; inset:0; width:100%; height:100%; }
+  .ring-outer{ animation: spin 60s linear infinite; transform-origin:center; }
+  .ring-outer-seg{ animation: spin 40s linear infinite reverse; transform-origin:center; }
+  .ring-mid{ animation: spin 26s linear infinite; transform-origin:center; }
+  .ring-tick{ animation: spin 90s linear infinite reverse; transform-origin:center; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .core-center-label{
+    position:absolute; text-align:center; pointer-events:none;
+  }
+  .core-center-label .cc-state{
+    font-family:'Orbitron', sans-serif; font-size:11px; letter-spacing:4px; color: var(--cyan-bright);
+    text-shadow:0 0 10px var(--cyan-glow);
+  }
+  .core-center-label .cc-sub{
+    font-family:'JetBrains Mono', monospace; font-size:9px; letter-spacing:2px; color: var(--text-dim); margin-top:4px;
+  }
+
+  .mic-btn{
+    margin-top: 22px;
+    display:flex; align-items:center; gap:10px;
+    background: rgba(53,230,224,0.06);
+    border:1px solid var(--cyan-dim);
+    color: var(--cyan-bright);
+    font-family:'Rajdhani', sans-serif; font-weight:600; letter-spacing:2px; font-size:13px;
+    padding: 10px 22px;
+    cursor:pointer;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    transition: all .25s ease;
+  }
+  .mic-btn:hover{ background: rgba(53,230,224,0.14); box-shadow:0 0 18px rgba(53,230,224,0.25); }
+  .mic-btn.active{ background: rgba(53,230,224,0.22); box-shadow:0 0 22px rgba(53,230,224,0.4); }
+  .mic-btn svg{ width:16px; height:16px; }
+
+  /* RIGHT: activity log */
+  .log-list{ display:flex; flex-direction:column; gap:10px; max-height: 100%; overflow-y:auto; padding-right:4px; }
+  .log-list::-webkit-scrollbar{ width:4px; }
+  .log-list::-webkit-scrollbar-thumb{ background: var(--cyan-dim); }
+  .log-item{
+    border-left: 2px solid var(--cyan-dim);
+    padding: 6px 0 6px 10px;
+    animation: fadeIn .4s ease;
+  }
+  .log-item.user{ border-left-color: var(--amber); }
+  @keyframes fadeIn{ from{ opacity:0; transform: translateX(6px);} to{opacity:1; transform:translateX(0);} }
+  .log-item .l-tag{ font-family:'JetBrains Mono', monospace; font-size:9px; letter-spacing:2px; color: var(--text-faint); }
+  .log-item.user .l-tag{ color: var(--amber); }
+  .log-item .l-text{ font-size:13.5px; color: var(--text); margin-top:3px; line-height:1.4; }
+  .log-item .l-time{ font-family:'JetBrains Mono', monospace; font-size:9px; color: var(--text-faint); margin-top:3px; }
+
+  /* ---------- BOTTOM COMMAND BAR ---------- */
+  .cmdbar{
+    display:flex; align-items:center; gap:14px;
+    border-top: 1px solid var(--panel-line);
+    padding-top: 14px;
+  }
+  .cmd-icon{ width:38px; height:38px; border:1px solid var(--cyan-dim); display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; }
+  .cmd-icon svg{ width:18px; height:18px; color: var(--cyan); }
+  .cmd-icon .pulse-ring{ position:absolute; inset:-4px; border:1px solid var(--cyan); opacity:0; border-radius:2px; }
+  .cmd-icon.listening .pulse-ring{ animation: pulseRing 1.6s ease-out infinite; }
+  @keyframes pulseRing{ 0%{ opacity:.7; transform:scale(1);} 100%{ opacity:0; transform:scale(1.4);} }
+
+  .cmd-input-wrap{ flex:1; position:relative; }
+  .cmd-input-wrap::before{
+    content:'>'; position:absolute; left:0; top:50%; transform:translateY(-50%);
+    color: var(--cyan); font-family:'JetBrains Mono', monospace; font-size:15px;
+  }
+  #cmdInput{
+    width:100%; background:transparent; border:none; outline:none;
+    border-bottom: 1px solid var(--panel-line);
+    color: var(--text); font-family:'JetBrains Mono', monospace; font-size:14px;
+    padding: 8px 8px 8px 20px; letter-spacing:0.5px;
+  }
+  #cmdInput::placeholder{ color: var(--text-faint); }
+  #cmdInput:focus{ border-bottom-color: var(--cyan); }
+
+  .send-btn{
+    background:none; border:1px solid var(--cyan-dim); color:var(--cyan-bright);
+    font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:2px; font-size:12px;
+    padding: 9px 18px; cursor:pointer; transition:.2s;
+  }
+  .send-btn:hover{ background: rgba(53,230,224,0.12); }
+
+  @media (max-width: 980px){
+    .main{ grid-template-columns: 1fr; grid-template-rows:auto auto auto; }
+    .core-stage{ width:min(70vw, 340px); }
+    .left-panel, .right-panel{ order:2; }
+  }
+
+  /* Animasi kedip-kedip untuk Storage Kritis (<5 GB) */
+  @keyframes blinker {
+    50% { opacity: 0.3; color: #ff3b30; text-shadow: none; }
+  }
+  .blink-critical {
+    animation: blinker 1s linear infinite;
+    color: #ff3b30 !important;
+  }
+
+  /* Transisi warna halus untuk bar RAM */
+  .ram-bar {
+    width: 0%;
+    height: 6px;
+    background-color: #00f0ff;
+    box-shadow: 0 0 10px #00f0ff;
+    transition: width 0.5s ease, background-color 0.5s ease;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" stroke="#35e6e0" stroke-width="1.2" opacity="0.5"/>
+          <circle cx="20" cy="20" r="12" stroke="#35e6e0" stroke-width="1.2"/>
+          <circle cx="20" cy="20" r="4" fill="#35e6e0"/>
+          <path d="M20 2 L20 8 M20 32 L20 38 M2 20 L8 20 M32 20 L38 20" stroke="#35e6e0" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>STACY</h1>
+        <span>ADAPTIVE INTERFACE</span>
+      </div>
+    </div>
+    <div class="top-status">
+      <div class="status-chip"><span class="dot"></span> SYSTEM NOMINAL</div>
+      <div class="status-chip"><span class="dot amber"></span> 2 ALERTS</div>
+      <div class="clock">
+        <div class="time" id="clockTime">00:00:00</div>
+        <div class="date" id="clockDate">-- --- ----</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- LEFT COLUMN: kartu-kartu terpisah -->
+    <div class="left-stack">
+
+      <div class="ring-cards-row">
+        <div class="panel ring-panel">
+          <div class="panel-title">CPU</div>
+          <div class="ring-box">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 84 84">
+                <circle class="ring-track" cx="42" cy="42" r="34"/>
+                <circle class="ring-fill" id="cpuRing" cx="42" cy="42" r="34"
+                  stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+              </svg>
+              <div class="ring-center">
+                <div class="rc-value" id="stat-cpu">--%</div>
+                <div class="rc-note">CORE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel ring-panel">
+          <div class="panel-title">BATTERY</div>
+          <div class="ring-box">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 84 84">
+                <circle class="ring-track" cx="42" cy="42" r="34"/>
+                <circle class="ring-fill" id="batteryRing" cx="42" cy="42" r="34"
+                  stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+              </svg>
+              <div class="ring-center">
+                <div class="rc-value" id="stat-baterai">--%</div>
+                <div class="rc-note" id="batteryNote">IDLE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel graph-panel">
+        <div class="panel-title">RAM PRESSURE <small id="stat-ram">--%</small></div>
+        <div class="ram-graph-frame"><canvas id="ramGraph"></canvas></div>
+        <div class="graph-scale"><span>-90s</span><span>-45s</span><span>NOW</span></div>
+      </div>
+
+      <div class="panel storage-panel" id="storage-box">
+        <div class="panel-title">STORAGE FREE</div>
+        <div class="storage-value-row">
+          <span class="storage-value" id="stat-storage">--</span>
+          <span class="storage-unit">GB AVAILABLE</span>
+        </div>
+        <div class="storage-track"><div class="storage-fill" id="storageFill"></div></div>
+        <div class="storage-ticks"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div> 
+    </div>
+
+    <div class="core-wrap">
+      <div class="core-stage">
+        <svg class="rings" viewBox="0 0 400 400">
+          <g class="ring-outer">
+            <circle cx="200" cy="200" r="188" stroke="#0f4c4a" stroke-width="1.5" fill="none"/>
+            <circle cx="200" cy="200" r="188" stroke="#35e6e0" stroke-width="3" fill="none"
+              stroke-dasharray="14 10" stroke-dashoffset="0" opacity="0.9"/>
+          </g>
+          <g class="ring-outer-seg">
+            <circle cx="200" cy="200" r="165" stroke="#35e6e0" stroke-width="2" fill="none" stroke-dasharray="2 6" opacity="0.5"/>
+          </g>
+          <g class="ring-mid">
+            <circle cx="200" cy="200" r="140" stroke="#0f4c4a" stroke-width="10" fill="none" stroke-dasharray="4 3" opacity="0.6"/>
+            <circle cx="200" cy="200" r="140" stroke="#7dfbff" stroke-width="2" fill="none" stroke-dasharray="20 100 6 100" opacity="0.9"/>
+          </g>
+          <g class="ring-tick">
+            <circle cx="200" cy="200" r="118" stroke="#35e6e0" stroke-width="1" fill="none" stroke-dasharray="1 5" opacity="0.7"/>
+          </g>
+          <circle cx="200" cy="200" r="86" stroke="#0f4c4a" stroke-width="1.5" fill="none"/>
+        </svg>
+        <canvas id="waveCanvas" width="420" height="420"></canvas>
+        <div class="core-center-label">
+          <div class="cc-state" id="coreState">STANDBY</div>
+          <div class="cc-sub" id="coreSub">tekan aktifkan suara</div>
+        </div>
+      </div>
+
+      <button class="mic-btn" id="micBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 1a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V5a4 4 0 0 0-4-4z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+        <span id="micBtnLabel">AKTIFKAN SUARA</span>
+      </button>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel right-panel">
+      <div class="panel-title">ACTIVITY LOG <small id="logCount">0</small></div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM COMMAND BAR -->
+  <div class="cmdbar">
+    <div class="cmd-icon" id="cmdIcon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 6h16M4 18h10"/></svg>
+      <div class="pulse-ring"></div>
+    </div>
+    <div class="cmd-input-wrap">
+      <input id="cmdInput" type="text" placeholder="ketik perintah, mis. 'status sistem hari ini'..." autocomplete="off"/>
+    </div>
+    <button class="send-btn" id="sendBtn">KIRIM</button>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- CLOCK ---------------- */
+const days=['Minggu','Senin','Selasa','Rabu','Kamis',"Jum'at",'Sabtu'];
+const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clockTime').textContent = n.toLocaleTimeString('en-GB');
+  document.getElementById('clockDate').textContent = `${days[n.getDay()]}, ${n.getDate()} ${months[n.getMonth()]} ${n.getFullYear()}`;
+}
+updateClock(); setInterval(updateClock,1000);
+
+/* ---------------- UPTIME ---------------- */
+const startTime=Date.now();
+setInterval(()=>{
+  const s=Math.floor((Date.now()-startTime)/1000);
+  const hh=String(Math.floor(s/3600)).padStart(2,'0');
+  const mm=String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const ss=String(s%60).padStart(2,'0');
+  document.getElementById('uptime').textContent=`${hh}:${mm}:${ss}`;
+},1000);
+
+/* ---------------- LATENCY (simulasi kecil, tidak butuh backend) ---------------- */
+setInterval(()=>{
+  document.getElementById('latency').textContent = Math.round(8+Math.random()*10)+'ms';
+}, 1800);
+
+/* ---------------- LOG ---------------- */
+const logList=document.getElementById('logList');
+const logCount=document.getElementById('logCount');
+let logN=0;
+function addLog(text, tag='SYSTEM', isUser=false){
+  logN++;
+  logCount.textContent=logN;
+  const item=document.createElement('div');
+  item.className='log-item'+(isUser?' user':'');
+  const time=new Date().toLocaleTimeString('en-GB');
+  item.innerHTML=`<div class="l-tag">${tag}</div><div class="l-text">${text}</div><div class="l-time">${time}</div>`;
+  logList.prepend(item);
+  while(logList.children.length>40){ logList.removeChild(logList.lastChild); }
+}
+addLog('Antarmuka STACY diinisialisasi.','BOOT');
+
+/* ---------------- COMMAND INPUT -> BACKEND STACY ---------------- */
+const coreState=document.getElementById('coreState');
+const coreSub=document.getElementById('coreSub');
+const cmdIcon=document.getElementById('cmdIcon');
+let micActive=false; // dideklarasikan lebih awal supaya bisa dipakai handleCommand
+
+async function handleCommand(text){
+  if(!text.trim()) return;
+  addLog(text, 'USER', true);
+  coreState.textContent = 'PROCESSING';
+  coreSub.textContent = 'menganalisis perintah...';
+  cmdIcon.classList.add('listening');
+
+  try {
+    const response = await fetch("http://127.0.0.1:5000/perintah", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ perintah: text })
+    });
+    const data = await response.json();
+    addLog(data.respon, 'STACY');
+  } catch(err) {
+    addLog('Gagal terhubung ke Core Python Stacy.', 'ERROR');
+  }
+
+  coreState.textContent = 'STANDBY';
+  coreSub.textContent = micActive ? 'mendengarkan...' : 'tekan aktifkan suara';
+  cmdIcon.classList.remove('listening');
+}
+
+const RING_CIRC = 213.6; // 2 * PI * r(34)
+function setRing(elId, percent, mode){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const p = Math.max(0, Math.min(100, percent));
+  el.setAttribute('stroke-dashoffset', RING_CIRC * (1 - p/100));
+
+  let color;
+  if(mode === 'battery'){
+    if(p <= 20) color = '#ff3b30';       
+    else if(p <= 50) color = '#ffb454';  
+    else color = '#39ff8f';          
+  } else {
+    color = '#35e6e0';                   
+    if(p >= 90) color = '#ff3b30';      
+    else if(p >= 75) color = '#ffb454'; 
+  }
+  el.style.stroke = color;
+}
+
+const ramHistory = [];
+const RAM_HISTORY_MAX = 30; 
+const ramCanvas = document.getElementById('ramGraph');
+const ramCtx = ramCanvas ? ramCanvas.getContext('2d') : null;
+
+function resizeRamGraph(){
+  if(!ramCanvas) return;
+  const rect = ramCanvas.getBoundingClientRect();
+  ramCanvas.width = rect.width * devicePixelRatio;
+  ramCanvas.height = rect.height * devicePixelRatio;
+}
+window.addEventListener('resize', resizeRamGraph);
+
+function drawRamGraph(){
+  if(!ramCtx || ramHistory.length < 2) return;
+  const w = ramCanvas.width, h = ramCanvas.height;
+
+  ramCtx.clearRect(0,0,w,h);
+  ramCtx.fillStyle = '#000000';
+  ramCtx.fillRect(0,0,w,h);
+
+  const last = ramHistory[ramHistory.length-1];
+  let lineColor = '#35e6e0';     
+  let lineColorBright = '#9df9f5';
+  if(last > 85){ lineColor = '#ff3b30'; lineColorBright = '#ff8a80'; }   
+  else if(last > 75){ lineColor = '#ffb454'; lineColorBright = '#ffd199'; } 
+
+  const stepX = w / (RAM_HISTORY_MAX - 1);
+  const startIdx = RAM_HISTORY_MAX - ramHistory.length;
+  const xAt = i => (startIdx+i) * stepX;
+  const yAt = v => h - (v/100)*h*0.92 - h*0.04;
+
+
+  ramCtx.strokeStyle = 'rgba(53,230,224,0.07)';
+  ramCtx.lineWidth = 1;
+  for(let gy=1; gy<=3; gy++){
+    const y = (h/4)*gy;
+    ramCtx.beginPath(); ramCtx.moveTo(0,y); ramCtx.lineTo(w,y); ramCtx.stroke();
+  }
+
+  ramCtx.lineCap = 'round';
+  ramHistory.forEach((v,i)=>{
+    const x = xAt(i);
+    const y = yAt(v);
+    ramCtx.beginPath();
+    ramCtx.moveTo(x, h);
+    ramCtx.lineTo(x, y);
+    ramCtx.strokeStyle = lineColor + '29'; f
+    ramCtx.lineWidth = Math.max(1, w*0.0025);
+    ramCtx.shadowColor = lineColor;
+    ramCtx.shadowBlur = 6;
+    ramCtx.stroke();
+  });
+
+  ramCtx.beginPath();
+  ramHistory.forEach((v,i)=>{
+    const win = ramHistory.slice(Math.max(0,i-2), i+1);
+    const avg = win.reduce((a,b)=>a+b,0)/win.length;
+    const x = xAt(i), y = yAt(avg);
+    if(i===0) ramCtx.moveTo(x,y); else ramCtx.lineTo(x,y);
+  });
+  ramCtx.strokeStyle = lineColorBright + '59';
+  ramCtx.lineWidth = Math.max(1, h*0.008);
+  ramCtx.shadowColor = lineColorBright;
+  ramCtx.shadowBlur = 4;
+  ramCtx.stroke();
+
+  ramCtx.beginPath();
+  ramHistory.forEach((v,i)=>{
+    const x = xAt(i), y = yAt(v);
+    if(i===0) ramCtx.moveTo(x,y); else ramCtx.lineTo(x,y);
+  });
+  ramCtx.lineTo(xAt(ramHistory.length-1), h);
+  ramCtx.lineTo(xAt(0), h);
+  ramCtx.closePath();
+  const grad = ramCtx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, lineColor+'40');
+  grad.addColorStop(1, lineColor+'00');
+  ramCtx.shadowBlur = 0;
+  ramCtx.fillStyle = grad;
+  ramCtx.fill();
+
+  for(let pass=0; pass<2; pass++){
+    ramCtx.beginPath();
+    ramHistory.forEach((v,i)=>{
+      const x = xAt(i), y = yAt(v);
+      if(i===0) ramCtx.moveTo(x,y); else ramCtx.lineTo(x,y);
+    });
+    ramCtx.strokeStyle = lineColor;
+    ramCtx.lineJoin = 'round';
+    ramCtx.lineCap = 'round';
+    if(pass===0){
+      ramCtx.lineWidth = Math.max(4, h*0.05);
+      ramCtx.shadowColor = lineColor;
+      ramCtx.shadowBlur = 20;
+      ramCtx.globalAlpha = 0.35;
+    } else {
+      ramCtx.lineWidth = Math.max(2, h*0.022);
+      ramCtx.shadowColor = lineColor;
+      ramCtx.shadowBlur = 14;
+      ramCtx.globalAlpha = 1;
+    }
+    ramCtx.stroke();
+  }
+  ramCtx.globalAlpha = 1;
+
+  const lx = xAt(ramHistory.length-1);
+  const ly = yAt(last);
+  ramCtx.shadowBlur = 18;
+  ramCtx.shadowColor = lineColor;
+  ramCtx.fillStyle = '#ffffff';
+  ramCtx.beginPath();
+  ramCtx.arc(lx, ly, Math.max(2.5, h*0.03), 0, Math.PI*2);
+  ramCtx.fill();
+  ramCtx.shadowBlur = 0;
+}
+
+async function updateSystemStatus() {
+  try {
+    const response = await fetch('http://127.0.0.1:5000/status-sistem');
+    const data = await response.json();
+
+
+    const batValEl = document.getElementById('stat-baterai');
+    const batNoteEl = document.getElementById('batteryNote');
+    if(batValEl){
+      batValEl.textContent = data.baterai.persen + '%';
+    }
+    if(batNoteEl){
+      batNoteEl.textContent = data.baterai.charging ? 'CHARGING' : 'IDLE';
+      batNoteEl.classList.toggle('charging', !!data.baterai.charging);
+    }
+    setRing('batteryRing', data.baterai.persen, 'battery');
+
+    const cpuEl = document.getElementById('stat-cpu');
+    if(cpuEl){
+      cpuEl.textContent = data.cpu + '%';
+    }
+    setRing('cpuRing', data.cpu, 'load');
+
+    const ramText = document.getElementById('stat-ram');
+    if(ramText){
+      ramText.textContent = data.ram + '%';
+      ramText.style.color = data.ram > 85 ? '#ff3b30' : (data.ram > 75 ? '#ffb454' : '#9df9f5');
+    }
+    ramHistory.push(data.ram);
+    if(ramHistory.length > RAM_HISTORY_MAX) ramHistory.shift();
+    drawRamGraph();
+
+    const storageText = document.getElementById('stat-storage');
+    const storageBox = document.getElementById('storage-box');
+    const storageFill = document.getElementById('storageFill');
+    if(storageText && storageBox){
+      storageText.textContent = data.storage_free;
+      if(storageFill){
+        const fillPct = Math.max(4, Math.min(100, data.storage_free * 2)); 
+        storageFill.style.width = fillPct + '%';
+        storageFill.style.background = data.storage_free < 5.0
+          ? 'linear-gradient(90deg, #7a1414, #ff3b30)'
+          : 'linear-gradient(90deg, var(--cyan-dim), var(--cyan))';
+      }
+      if (data.storage_free < 5.0) {
+        storageBox.classList.add('blink-critical');
+      } else {
+        storageBox.classList.remove('blink-critical');
+      }
+    }
+  } catch (error) {
+    console.log("Stacy Core belum aktif di latar belakang.");
+  }
+}
+
+
+resizeRamGraph();
+updateSystemStatus();
+setInterval(updateSystemStatus, 3000);
+
+document.getElementById('sendBtn').addEventListener('click', ()=>{
+  const inp=document.getElementById('cmdInput');
+  handleCommand(inp.value); inp.value='';
+});
+document.getElementById('cmdInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ handleCommand(e.target.value); e.target.value=''; }
+});
+
+const canvas=document.getElementById('waveCanvas');
+const ctx=canvas.getContext('2d');
+let audioCtx, analyser, dataArray, source, stream;
+const micBtn=document.getElementById('micBtn');
+const micBtnLabel=document.getElementById('micBtnLabel');
+
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+}
+window.addEventListener('resize', resizeCanvas);
+
+async function enableMic(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 128;
+    analyser.smoothingTimeConstant = 0.75;
+    source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    micActive = true;
+    micBtn.classList.add('active');
+    micBtnLabel.textContent = 'SUARA AKTIF';
+    coreState.textContent='LISTENING';
+    coreSub.textContent='mendengarkan...';
+    addLog('Input suara diaktifkan.', 'AUDIO');
+  }catch(err){
+    addLog('Akses mikrofon ditolak. Menggunakan mode simulasi.', 'WARNING');
+    micActive = false;
+  }
+}
+
+function disableMic(){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+  if(audioCtx){ audioCtx.close(); }
+  micActive=false;
+  micBtn.classList.remove('active');
+  micBtnLabel.textContent='AKTIFKAN SUARA';
+  coreState.textContent='STANDBY';
+  coreSub.textContent='tekan aktifkan suara';
+  addLog('Input suara dinonaktifkan.', 'AUDIO');
+}
+
+micBtn.addEventListener('click', ()=>{
+  if(!micActive){ enableMic(); } else { disableMic(); }
+});
+
+let t=0;
+function drawWave(){
+  requestAnimationFrame(drawWave);
+  const w = canvas.width, h = canvas.height;
+  const cx = w/2, cy = h/2;
+  ctx.clearRect(0,0,w,h);
+  t += 0.02;
+
+  const baseR = h*0.205;
+  const bars = 64;
+  let amp = new Array(bars).fill(0);
+
+  if(micActive && analyser){
+    analyser.getByteFrequencyData(dataArray);
+    for(let i=0;i<bars;i++){
+      const idx = Math.floor(i * (dataArray.length/bars));
+      amp[i] = dataArray[idx]/255;
+    }
+  } else {
+    for(let i=0;i<bars;i++){
+      amp[i] = 0.18 + 0.10*Math.sin(t*1.6 + i*0.35) + 0.05*Math.sin(t*3.1+i*0.9);
+    }
+  }
+
+  for(let i=0;i<bars;i++){
+    const angle = (i/bars) * Math.PI*2 - Math.PI/2;
+    const len = amp[i] * (h*0.16) + h*0.02;
+    const x1 = cx + Math.cos(angle)*baseR;
+    const y1 = cy + Math.sin(angle)*baseR;
+    const x2 = cx + Math.cos(angle)*(baseR+len);
+    const y2 = cy + Math.sin(angle)*(baseR+len);
+    const alpha = 0.35 + amp[i]*0.65;
+    ctx.strokeStyle = `rgba(125,251,255,${alpha})`;
+    ctx.lineWidth = Math.max(1.5, h*0.006);
+    ctx.lineCap='round';
+    ctx.shadowColor = 'rgba(53,230,224,0.9)';
+    ctx.shadowBlur = 6 + amp[i]*10;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+
+  const avg = amp.reduce((a,b)=>a+b,0)/bars;
+  ctx.shadowBlur = 20 + avg*40;
+  ctx.shadowColor = 'rgba(53,230,224,1)';
+  ctx.fillStyle = `rgba(157,249,245,${0.6+avg*0.4})`;
+  ctx.beginPath();
+  ctx.arc(cx, cy, h*0.028 + avg*h*0.03, 0, Math.PI*2);
+  ctx.fill();
+}
+resizeCanvas();
+drawWave();
+</script>
+</body>
+</html>
